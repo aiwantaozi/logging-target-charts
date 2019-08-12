@@ -1,0 +1,14 @@
+name: splunk
+version: 7.0
+appVersion: 7.0
+description: Splunk for testing
+keywords:
+- docker
+- splunk
+home: https://www.splunk.com
+sources:
+- https://github.com/splunk
+maintainers:
+- name: Rancher
+  email: support@rancher.com
+engine: gotpl

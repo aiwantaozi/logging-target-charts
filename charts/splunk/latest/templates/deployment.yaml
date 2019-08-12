@@ -1,0 +1,58 @@
+apiVersion: {{ template "deployment_api_version" . }}
+kind: Deployment
+metadata:
+  name: {{ template "splunk.fullname" . }}
+  labels:
+    app: {{ template "splunk.name" . }}
+    chart: {{ template "splunk.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "splunk.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "splunk.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+{{- range $port := .Values.service.ports }}
+          - name: {{ $port.name }}
+            containerPort: {{ $port.port }}
+{{- if $port.protocol }}
+            protocol: {{ $port.protocol }}
+{{- end }}
+{{- end }}
+        env:
+          - name: SPLUNK_PASSWORD
+            value: {{ .Values.password | quote }}
+          - name: SPLUNK_START_ARGS
+            value: {{ .Values.startArgs | quote}}
+        resources:
+{{ toYaml .Values.resources | indent 12 }}
+    {{- with .Values.nodeSelector }}
+      
+      nodeSelector:
+{{- if semverCompare "<1.14-0" .Capabilities.KubeVersion.GitVersion }}
+        beta.kubernetes.io/os: linux
+{{- else}}
+        kubernetes.io/os: linux
+{{- end}}
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}

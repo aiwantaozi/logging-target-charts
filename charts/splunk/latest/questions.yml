@@ -1,0 +1,41 @@
+categories:
+- Test
+- Logging
+labels:
+  io.rancher.certified: partner
+questions:
+- variable: image.repository
+  default: "splunk/splunk"
+  description: "Docker image name"
+  type: string
+  required: true
+  label: Image Name for splunk
+  group: "splunk Settings"
+- variable: image.tag
+  default: "latest"
+  description: "Image tag"
+  type: string
+  required: true
+  label: Image tag
+  group: "splunk Settings"
+- variable: image.pullPolicy
+  default: "Always"
+  description: "Image pull policy"
+  type: enum
+  required: true
+  options:
+    - "Always"
+    - "IfNotPresent"
+  label: Image pull polcy
+  group: "splunk Settings"
+- variable: service.type
+  default: "NodePort"
+  description: "Service type"
+  type: enum
+  group: "Services and Load Balancing"
+  options:
+    - "ClusterIP"
+    - "LoadBalancer"
+    - "NodePort"
+  required: true
+  label: splunk Service Type
