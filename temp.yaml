@@ -1,0 +1,273 @@
+---
+# Source: elastic/templates/kibana-config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elastic-kibana
+  labels:
+    app: elastic
+    chart: elastic-0.1.3
+    release: elastic
+    heritage: Tiller
+data:
+  ELASTICSEARCH_URL: http://elastic-elastic-elasticsearch:9200
+  SERVER_PORT: "5601"
+  LOGGING_VERBOSE: "true"
+  SERVER_DEFAULTROUTE: "/app/kibana"
+
+---
+# Source: elastic/charts/elasticsearch/templates/service-account.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: elasticsearch
+    chart: elasticsearch-0.1.0
+    release: elastic
+    heritage: Tiller
+  name: elastic-elasticsearch
+
+---
+# Source: elastic/charts/elasticsearch/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: elastic-elasticsearch
+  labels:
+    app: elasticsearch
+    chart: elasticsearch-0.1.0
+    release: elastic
+    heritage: Tiller
+rules:
+- nonResourceURLs:
+  - /
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets/status
+  verbs:
+  - get
+---
+# Source: elastic/charts/elasticsearch/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: elastic-elasticsearch
+  labels:
+    app: elasticsearch
+    chart: elasticsearch-0.1.0
+    release: elastic
+    heritage: Tiller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: elastic-elasticsearch
+subjects:
+- kind: ServiceAccount
+  name: elastic-elasticsearch
+  namespace: default
+---
+# Source: elastic/charts/elasticsearch/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: elastic-elasticsearch
+  labels:
+    app: elasticsearch
+    chart: elasticsearch-0.1.0
+    release: elastic
+    heritage: Tiller
+spec:
+  type: NodePort
+  ports:
+    
+    - name: http
+      port: 9200
+      targetPort: http
+    
+    - name: transport
+      port: 9300
+      targetPort: transport
+  selector:
+    app: elasticsearch
+    release: elastic
+    component: "master"
+
+---
+# Source: elastic/charts/kibana/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: kibana
+    chart: kibana-0.5.0
+    release: elastic
+    heritage: Tiller
+  name: elastic-kibana
+  annotations:
+spec:
+  type: NodePort
+  ports:
+    - port: 443
+      targetPort: 5601
+      protocol: TCP
+  selector:
+    app: kibana
+    release: elastic
+
+---
+# Source: elastic/charts/kibana/templates/deployment.yaml
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: kibana
+    chart: "kibana-0.5.0"
+    heritage: Tiller
+    release: elastic
+  name: elastic-kibana
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kibana
+        release: "elastic"
+    spec:
+      containers:
+      - name: kibana
+        image: "docker.elastic.co/kibana/kibana-oss:6.2.4"
+        imagePullPolicy: IfNotPresent
+        env:
+        # Define the environment variable
+        envFrom:
+        - configMapRef:
+            name: elastic-kibana
+        ports:
+        - containerPort: 5601
+          name: kibana
+          protocol: TCP
+        # livenessProbe:
+        #   httpGet:
+        #     path: /ping
+        #     port: 5601
+        # readinessProbe:
+        #   httpGet:
+        #     path: /ping
+        #     port: 5601
+        resources:
+          {}
+          
+      tolerations:
+        []
+        
+
+---
+# Source: elastic/charts/elasticsearch/templates/statefulsets.yaml
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: elastic-elasticsearch
+  labels:
+    app: elasticsearch
+    chart: elasticsearch-0.1.0
+    release: elastic
+    heritage: Tiller
+spec:
+  podManagementPolicy: Parallel
+  serviceName: elastic-elasticsearch
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+        component: "master"
+        release: elastic
+    spec:
+      serviceAccountName: elastic-elasticsearch
+      securityContext:
+        fsGroup: 1000
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: "elasticsearch"
+                  release: "elastic"
+                  component: "master"
+      initContainers:
+      # see https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html
+      # and https://www.elastic.co/guide/en/elasticsearch/reference/current/setup-configuration-memory.html#mlockall
+      - name: "sysctl"
+        image: "busybox"
+        imagePullPolicy: "Always"
+        command: ["sysctl", "-w", "vm.max_map_count=262144"]
+        securityContext:
+          allowPrivilegeEscalation: true
+          privileged: true
+      containers:
+      - name: elasticsearch
+        env:
+        - name: cluster.name
+          value: elastic-cluster
+        - name: discovery.zen.ping.unicast.hosts
+          value: elastic-elasticsearch
+        - name: discovery.zen.minimum_master_nodes
+          value: "2"
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        # node roles, default to all true
+        # - name: NODE_MASTER
+        #   value: "true"
+        # - name: NODE_DATA
+        #   value: "true"
+        # - name: NODE_INGEST
+        #   value: "true"
+        - name: PROCESSORS
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.cpu
+        - name: ES_JAVA_OPTS
+          value: "-Djava.net.preferIPv4Stack=true -Xms512m -Xmx512m"
+        resources:
+            limits:
+              cpu: "1"
+            requests:
+              cpu: 25m
+              memory: 512Mi
+            
+        readinessProbe:
+          httpGet:
+            path: /_cluster/health?local=true
+            port: 9200
+          initialDelaySeconds: 5
+        image: "docker.elastic.co/elasticsearch/elasticsearch-oss:6.2.4"
+        imagePullPolicy: "IfNotPresent"
+        ports:
+        - containerPort: 9300
+          name: transport
+        - containerPort: 9200
+          name: http
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: es-data
+      volumes:
+      - name: es-data
+        emptyDir: {}
+
+---
+# Source: elastic/charts/kibana/templates/ingress.yaml
+
