@@ -66,9 +66,11 @@ spec:
       affinity:
 {{ toYaml .Values.affinity | indent 8 }}
     {{- end }}
-    {{- if .Values.nodeSelector }}
       nodeSelector:
+{{- include "linux-node-selector" . | nindent 8 }}
+    {{- if .Values.nodeSelector }}
 {{ toYaml .Values.nodeSelector | indent 8 }}
     {{- end }}
       tolerations:
+{{- include "linux-node-tolerations" . | nindent 8}}
 {{ toYaml .Values.tolerations | indent 8 }}

@@ -22,6 +22,10 @@ spec:
 {{ toYaml .Values.master.podAnnotations | indent 8 }}
         {{- end }}
     spec:
+      tolerations:
+{{- include "linux-node-tolerations" . | nindent 8}}
+      nodeSelector:
+{{- include "linux-node-selector" . | nindent 8 }}
       serviceAccountName: {{ template "elasticsearch.fullname" . }}
       {{- if .Values.securityContextEnable }}
       securityContext:

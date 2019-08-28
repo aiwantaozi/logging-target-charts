@@ -76,3 +76,23 @@ Create chart name and version as used by the chart label.
 {{- "rbac.authorization.k8s.io/v1alpha1" -}}
 {{- end -}}
 {{- end -}}
+
+
+{{- define "linux-node-selector" -}}
+{{- if semverCompare "<1.14-0" .Capabilities.KubeVersion.GitVersion -}}
+beta.kubernetes.io/os: linux
+{{- else -}}
+kubernetes.io/os: linux
+{{- end -}}
+{{- end -}}
+
+{{/*
+Windows cluster will add default taint for linux nodes, 
+add below linux tolerations to workloads could be scheduled to those linux nodes
+*/}}
+{{- define "linux-node-tolerations" -}}
+- key: "cattle.io/os"
+  value: "linux"
+  effect: "NoSchedule"
+  operator: "Equal"
+{{- end -}} 

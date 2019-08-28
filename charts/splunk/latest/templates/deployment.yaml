@@ -38,21 +38,17 @@ spec:
             value: {{ .Values.startArgs | quote}}
         resources:
 {{ toYaml .Values.resources | indent 12 }}
-    {{- with .Values.nodeSelector }}
-      
       nodeSelector:
-{{- if semverCompare "<1.14-0" .Capabilities.KubeVersion.GitVersion }}
-        beta.kubernetes.io/os: linux
-{{- else}}
-        kubernetes.io/os: linux
-{{- end}}
+{{- include "linux-node-selector" . | nindent 8 }}
+    {{- with .Values.nodeSelector }}
 {{ toYaml . | indent 8 }}
     {{- end }}
     {{- with .Values.affinity }}
       affinity:
 {{ toYaml . | indent 8 }}
     {{- end }}
-    {{- with .Values.tolerations }}
       tolerations:
+{{- include "linux-node-tolerations" . | nindent 8}}
+    {{- with .Values.tolerations }}
 {{ toYaml . | indent 8 }}
     {{- end }}
