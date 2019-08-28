@@ -30,16 +30,6 @@ questions:
     description: "Kibana image tag"
     type: string
     label: Kibana Image Tag
-  - variable: fluent-bit.image.fluent_bit.repository
-    default: "fluent/fluent-bit"
-    description: "Fluent-Bit image name"
-    type: string
-    label: Fluent-Bit Image Name
-  - variable: fluent-bit.image.fluent_bit.tag
-    default: "0.13.0"
-    description: "Fluent-Bit image tag"
-    type: string
-    label: Fluent-Bit Image Tag
 # elasticsearch settings
 - variable: elasticsearch.master.heapSize
   default: "512m"
@@ -98,11 +88,3 @@ questions:
     type: hostname
     required: true
     label: Hostname
-# fluent-bit settings:
-- variable: fluent-bit.enabled
-  default: false
-  group: "Fluent-Bit"
-  description: "Enable fluent-bit, the Kubernetes log forwarder"
-  type: boolean
-  label: Enable Fluent-Bit
-  required: true
