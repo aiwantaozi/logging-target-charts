@@ -1,0 +1,56 @@
+apiVersion: {{ template "deployment_api_version" . }}
+kind: Deployment
+metadata:
+  name: {{ template "syslog.fullname" . }}
+  labels:
+    app: {{ template "syslog.name" . }}
+    chart: {{ template "syslog.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "syslog.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "syslog.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+{{- range $port := .Values.service.ports }}
+          - name: {{ $port.name }}
+            containerPort: {{ $port.port }}
+{{- if $port.protocol }}
+            protocol: {{ $port.protocol }}
+{{- end }}
+{{- end }}
+        securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          add:
+          - NET_BIND_SERVICE
+          drop:
+          - ALL
+        resources:
+{{ toYaml .Values.resources | indent 12 }}
+      nodeSelector:
+{{- include "linux-node-selector" . | nindent 8 }}
+    {{- with .Values.nodeSelector }}
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+      tolerations:
+{{- include "linux-node-tolerations" . | nindent 8}}
+    {{- with .Values.tolerations }}
+{{ toYaml . | indent 8 }}
+    {{- end }}

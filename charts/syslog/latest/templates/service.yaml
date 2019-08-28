@@ -1,0 +1,28 @@
+{{- if .Values.service }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "syslog.fullname" . }}
+  labels:
+    app: {{ template "syslog.name" . }}
+    chart: {{ template "syslog.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  {{- range $port := .Values.service.ports }}
+    - name: {{ $port.name }}
+      port: {{ $port.port }}
+      targetPort: {{ $port.port }}
+      {{- if $port.nodePort }}
+      nodePort: {{ $port.nodePort }}
+      {{- end }}
+      {{- if $port.protocol }}
+      protocol: {{ $port.protocol }}
+      {{- end }}
+  {{- end }}
+  selector:
+    app: {{ template "syslog.name" . }}
+    release: {{ .Release.Name }}
+{{- end }}

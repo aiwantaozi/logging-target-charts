@@ -1,0 +1,14 @@
+name: syslog	
+version: 7.0	
+appVersion: 7.0	
+description: syslog for testing	
+keywords:	
+- docker	
+- syslog	
+home: https://www.syslog.com	
+sources:	
+- https://github.com/syslog	
+maintainers:	
+- name: Rancher	
+  email: support@rancher.com	
+engine: gotpl
